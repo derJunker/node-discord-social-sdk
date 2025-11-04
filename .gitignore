@@ -59,3 +59,6 @@ yarn-error.log*
 .idea/
 *.swp
 *.swo
+
+# CodeQL
+_codeql_*
