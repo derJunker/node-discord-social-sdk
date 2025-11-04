@@ -1,14 +1,49 @@
 import * as path from 'path';
 
-// Load the native addon
-const addonPath = path.join(__dirname, '../build/Release/discord_social_sdk.node');
-const addon = require(addonPath);
+// Interface for the native addon
+interface NativeDiscordSDK {
+    getUserInfo(userId: string): string;
+    sendMessage(channelId: string, message: string): boolean;
+    getOnlineUsers(): number;
+}
+
+// Interface for the addon constructor
+interface NativeAddon {
+    DiscordSocialSDK: new () => NativeDiscordSDK;
+}
+
+// Load the native addon with flexible path resolution
+function loadNativeAddon(): NativeAddon {
+    // Try Release build first, fallback to Debug
+    const buildConfigs = ['Release', 'Debug'];
+    
+    for (const config of buildConfigs) {
+        try {
+            const addonPath = path.join(__dirname, `../build/${config}/discord_social_sdk.node`);
+            return require(addonPath);
+        } catch (error) {
+            // Try next configuration
+        }
+    }
+    
+    // If no specific build found, try default path
+    try {
+        const addonPath = path.join(__dirname, '../build/discord_social_sdk.node');
+        return require(addonPath);
+    } catch (error) {
+        throw new Error(
+            'Failed to load native addon. Please ensure the project is built using "npm run build" or "npm install".'
+        );
+    }
+}
+
+const addon = loadNativeAddon();
 
 /**
  * Discord Social SDK - TypeScript wrapper for native C++ module
  */
 export class DiscordSocialSDK {
-    private nativeInstance: any;
+    private nativeInstance: NativeDiscordSDK;
 
     constructor() {
         this.nativeInstance = new addon.DiscordSocialSDK();

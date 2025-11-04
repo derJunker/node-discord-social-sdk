@@ -1,0 +1,3 @@
+/home/runner/work/node-discord-social-sdk/node-discord-social-sdk/_codeql_build_dir/CMakeFiles/discord_social_sdk.dir
+/home/runner/work/node-discord-social-sdk/node-discord-social-sdk/_codeql_build_dir/CMakeFiles/edit_cache.dir
+/home/runner/work/node-discord-social-sdk/node-discord-social-sdk/_codeql_build_dir/CMakeFiles/rebuild_cache.dir

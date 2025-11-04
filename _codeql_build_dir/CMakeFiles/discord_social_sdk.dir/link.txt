@@ -1,0 +1,1 @@
+/home/runner/work/node-discord-social-sdk/.codeql-scratch/dbs/cpp/working/autobuild/bin/c++ -fPIC -O3 -DNDEBUG -Wl,--dependency-file=CMakeFiles/discord_social_sdk.dir/link.d -shared -Wl,-soname,discord_social_sdk.node -o discord_social_sdk.node CMakeFiles/discord_social_sdk.dir/src/native/addon.cpp.o CMakeFiles/discord_social_sdk.dir/src/native/discord_sdk.cpp.o
