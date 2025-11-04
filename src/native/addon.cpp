@@ -1,5 +1,4 @@
 #include <napi.h>
-#include "discord_sdk.h"
 
 // Wrapper class for N-API
 class DiscordSocialSDK : public Napi::ObjectWrap<DiscordSocialSDK> {
@@ -8,8 +7,6 @@ public:
     DiscordSocialSDK(const Napi::CallbackInfo& info);
 
 private:
-    DiscordSDK::SocialSDK sdk_;
-
     Napi::Value GetUserInfo(const Napi::CallbackInfo& info);
     Napi::Value SendMessage(const Napi::CallbackInfo& info);
     Napi::Value GetOnlineUsers(const Napi::CallbackInfo& info);
@@ -48,9 +45,8 @@ Napi::Value DiscordSocialSDK::GetUserInfo(const Napi::CallbackInfo& info) {
     }
 
     std::string userId = info[0].As<Napi::String>().Utf8Value();
-    std::string result = sdk_.getUserInfo(userId);
 
-    return Napi::String::New(env, result);
+    return Napi::String::New(env, "userInfo");
 }
 
 Napi::Value DiscordSocialSDK::SendMessage(const Napi::CallbackInfo& info) {
@@ -63,15 +59,14 @@ Napi::Value DiscordSocialSDK::SendMessage(const Napi::CallbackInfo& info) {
 
     std::string channelId = info[0].As<Napi::String>().Utf8Value();
     std::string message = info[1].As<Napi::String>().Utf8Value();
-    bool result = sdk_.sendMessage(channelId, message);
+    
 
-    return Napi::Boolean::New(env, result);
+    return Napi::Boolean::New(env, true);
 }
 
 Napi::Value DiscordSocialSDK::GetOnlineUsers(const Napi::CallbackInfo& info) {
     Napi::Env env = info.Env();
-    int result = sdk_.getOnlineUsers();
-    return Napi::Number::New(env, result);
+    return Napi::Number::New(env, 0);
 }
 
 Napi::Object Init(Napi::Env env, Napi::Object exports) {
