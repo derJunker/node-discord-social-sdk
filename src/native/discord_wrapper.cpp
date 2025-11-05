@@ -1,3 +1,7 @@
+#ifdef USE_DISCORD_SDK
+#define DISCORDPP_IMPLEMENTATION
+#endif
+
 #include "discord_wrapper.h"
 #include <iostream>
 

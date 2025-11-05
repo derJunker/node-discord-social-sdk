@@ -6,7 +6,6 @@
 #include <memory>
 
 #ifdef USE_DISCORD_SDK
-#define DISCORDPP_IMPLEMENTATION
 #include "discordpp.h"
 #endif
 
