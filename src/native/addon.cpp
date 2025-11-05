@@ -48,12 +48,12 @@ DiscordSocialSDK::DiscordSocialSDK(const Napi::CallbackInfo& info)
 Napi::Value DiscordSocialSDK::Initialize(const Napi::CallbackInfo& info) {
     Napi::Env env = info.Env();
 
-    if (info.Length() < 1 || !info[0].IsNumber()) {
-        Napi::TypeError::New(env, "Client ID (number) expected").ThrowAsJavaScriptException();
+    if (info.Length() < 1 || !info[0].IsString()) {
+        Napi::TypeError::New(env, "Client ID (string) expected").ThrowAsJavaScriptException();
         return env.Null();
     }
 
-    uint64_t clientId = static_cast<uint64_t>(info[0].As<Napi::Number>().Int64Value());
+    std::string clientId = info[0].As<Napi::String>().Utf8Value();
     bool success = sdk_->Initialize(clientId);
 
     return Napi::Boolean::New(env, success);

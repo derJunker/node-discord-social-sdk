@@ -33,7 +33,7 @@ public:
     ~DiscordSDK();
 
     // Initialize the SDK with client ID
-    bool Initialize(uint64_t clientId);
+    bool Initialize(const std::string& clientId);
     
     // Shutdown the SDK
     void Shutdown();

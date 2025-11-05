@@ -27,7 +27,7 @@ export type AuthCallback = (result: AuthResult) => void;
 
 // Interface for the native addon
 interface NativeDiscordSDK {
-    initialize(clientId: number): boolean;
+    initialize(clientId: string): boolean;
     shutdown(): void;
     updateActivity(activity: Activity): boolean;
     clearActivity(): boolean;
@@ -83,9 +83,9 @@ export class DiscordSocialSDK {
      * @param clientId - Your Discord application's client ID
      * @returns True if initialization was successful
      */
-    initialize(clientId: number): boolean {
-        if (typeof clientId !== 'number') {
-            throw new TypeError('clientId must be a number');
+    initialize(clientId: string): boolean {
+        if (typeof clientId !== 'string') {
+            throw new TypeError('clientId must be a string');
         }
         return this.nativeInstance.initialize(clientId);
     }

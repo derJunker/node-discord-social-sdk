@@ -14,10 +14,11 @@ DiscordSDK::~DiscordSDK() {
     Shutdown();
 }
 
-bool DiscordSDK::Initialize(uint64_t clientId) {
+bool DiscordSDK::Initialize(const std::string& clientId) {
 #ifdef USE_DISCORD_SDK
     try {
-        clientId_ = clientId;
+        // Convert clientId string to uint64_t
+        clientId_ = std::stoull(clientId);
         client_ = std::make_shared<discordpp::Client>();
         
         // Add log callback
