@@ -43,6 +43,29 @@ npm run build:ts
 npm run clean
 ```
 
+## Setup
+
+### Discord SDK Integration
+
+To use the full Discord Social SDK features, you need to:
+
+1. Download the Discord Social SDK from Discord's developer portal
+2. Extract it into the `lib/discord_social_sdk` directory with the following structure:
+   ```
+   lib/
+   └── discord_social_sdk/
+       ├── include/
+       │   └── discordpp.h
+       ├── lib/
+       │   └── release/
+       │       └── (platform-specific libraries)
+       └── bin/
+           └── release/
+               └── (platform-specific binaries)
+   ```
+
+The project will build with or without the Discord SDK. If the SDK is not found, it will build without Discord integration.
+
 ## Usage
 
 ### JavaScript
@@ -52,65 +75,154 @@ const { DiscordSocialSDK } = require('node-discord-social-sdk');
 
 const sdk = new DiscordSocialSDK();
 
-// Get user information
-const userInfo = sdk.getUserInfo('user123');
-console.log(userInfo);
+// Initialize with your Discord application's client ID
+const clientId = 123456789012345678; // Replace with your client ID
+if (sdk.initialize(clientId)) {
+    console.log('Discord SDK initialized!');
 
-// Send a message
-const success = sdk.sendMessage('channel456', 'Hello World!');
-console.log('Message sent:', success);
+    // Update rich presence
+    sdk.updateActivity({
+        state: 'Playing Solo',
+        details: 'In a match',
+        largeImageKey: 'game_logo',
+        largeImageText: 'My Game',
+        startTimestamp: Date.now()
+    });
 
-// Get online users count
-const onlineUsers = sdk.getOnlineUsers();
-console.log('Online users:', onlineUsers);
+    // Clear activity
+    sdk.clearActivity();
+
+    // Authorize user
+    sdk.authorize('identify email', (result) => {
+        if (result.success) {
+            console.log('Access Token:', result.accessToken);
+        } else {
+            console.error('Auth failed:', result.error);
+        }
+    });
+
+    // Run callbacks periodically (e.g., in game loop)
+    setInterval(() => {
+        sdk.runCallbacks();
+    }, 100);
+
+    // Cleanup on exit
+    process.on('exit', () => {
+        sdk.shutdown();
+    });
+}
 ```
 
 ### TypeScript
 
 ```typescript
-import { DiscordSocialSDK } from 'node-discord-social-sdk';
+import { DiscordSocialSDK, Activity, AuthResult } from 'node-discord-social-sdk';
 
-const sdk = new DiscordSocialSDK();
+const sdk: DiscordSocialSDK = new DiscordSocialSDK();
 
-// Get user information
-const userInfo: string = sdk.getUserInfo('user123');
-console.log(userInfo);
+// Initialize with your Discord application's client ID
+const clientId: number = 123456789012345678; // Replace with your client ID
+if (sdk.initialize(clientId)) {
+    console.log('Discord SDK initialized!');
 
-// Send a message
-const success: boolean = sdk.sendMessage('channel456', 'Hello World!');
-console.log('Message sent:', success);
+    // Update rich presence with type safety
+    const activity: Activity = {
+        state: 'Playing Solo',
+        details: 'In a match',
+        largeImageKey: 'game_logo',
+        largeImageText: 'My Game',
+        startTimestamp: Date.now(),
+        partyId: 'party123',
+        partySize: 1,
+        partyMax: 4
+    };
+    sdk.updateActivity(activity);
 
-// Get online users count
-const onlineUsers: number = sdk.getOnlineUsers();
-console.log('Online users:', onlineUsers);
+    // Clear activity
+    sdk.clearActivity();
+
+    // Authorize user with callback
+    sdk.authorize('identify email', (result: AuthResult) => {
+        if (result.success) {
+            console.log('Access Token:', result.accessToken);
+        } else {
+            console.error('Auth failed:', result.error);
+        }
+    });
+
+    // Run callbacks periodically
+    setInterval(() => {
+        sdk.runCallbacks();
+    }, 100);
+
+    // Cleanup on exit
+    process.on('exit', () => {
+        sdk.shutdown();
+    });
+}
 ```
 
 ## API
 
 ### `DiscordSocialSDK`
 
-#### `getUserInfo(userId: string): string`
+#### `initialize(clientId: number): boolean`
 
-Get user information by user ID.
-
-- **Parameters:**
-  - `userId` (string): The Discord user ID
-- **Returns:** User information string
-
-#### `sendMessage(channelId: string, message: string): boolean`
-
-Send a message to a Discord channel.
+Initialize the Discord SDK with your application's client ID.
 
 - **Parameters:**
-  - `channelId` (string): The Discord channel ID
-  - `message` (string): The message to send
-- **Returns:** `true` if message was sent successfully
+  - `clientId` (number): Your Discord application's client ID
+- **Returns:** `true` if initialization was successful
 
-#### `getOnlineUsers(): number`
+#### `shutdown(): void`
 
-Get the number of online users.
+Shutdown the Discord SDK and clean up resources.
 
-- **Returns:** The count of online users
+#### `updateActivity(activity: Activity): boolean`
+
+Update the rich presence activity displayed on Discord.
+
+- **Parameters:**
+  - `activity` (Activity): Activity object with the following optional properties:
+    - `state` (string): The user's current party status
+    - `details` (string): What the player is currently doing
+    - `largeImageKey` (string): Name of the large image asset
+    - `largeImageText` (string): Text displayed when hovering over large image
+    - `smallImageKey` (string): Name of the small image asset
+    - `smallImageText` (string): Text displayed when hovering over small image
+    - `startTimestamp` (number): Unix timestamp (ms) for start of activity
+    - `endTimestamp` (number): Unix timestamp (ms) for end of activity
+    - `partyId` (string): ID of the player's party
+    - `partySize` (number): Current size of the party
+    - `partyMax` (number): Maximum size of the party
+- **Returns:** `true` if activity was updated successfully
+
+#### `clearActivity(): boolean`
+
+Clear the current rich presence activity.
+
+- **Returns:** `true` if activity was cleared successfully
+
+#### `authorize(scopes: string, callback: (result: AuthResult) => void): void`
+
+Authorize the user and get an OAuth2 token.
+
+- **Parameters:**
+  - `scopes` (string): Space-separated OAuth2 scopes (e.g., "identify email")
+  - `callback` (function): Callback function that receives an AuthResult object with:
+    - `success` (boolean): Whether authorization was successful
+    - `accessToken` (string): The OAuth2 access token (if successful)
+    - `error` (string): Error message (if failed)
+
+#### `runCallbacks(): void`
+
+Run Discord SDK callbacks. This should be called periodically (e.g., every 100ms) to process SDK events.
+
+#### `isInitialized(): boolean`
+
+Check if the SDK is initialized.
+
+- **Returns:** `true` if the SDK is initialized
 
 ## Testing
 

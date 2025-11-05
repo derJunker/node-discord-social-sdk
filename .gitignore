@@ -62,3 +62,6 @@ yarn-error.log*
 
 # CodeQL
 _codeql_*
+
+# Discord SDK (user must provide their own)
+lib/discord_social_sdk/
