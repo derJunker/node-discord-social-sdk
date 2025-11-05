@@ -6,7 +6,11 @@
 #include <memory>
 
 #ifdef USE_DISCORD_SDK
+#ifdef USE_DISCORD_SDK_ALT_HEADER
 #include "discordpp.h"
+#else
+#include "discord.h"
+#endif
 #endif
 
 namespace DiscordWrapper {
