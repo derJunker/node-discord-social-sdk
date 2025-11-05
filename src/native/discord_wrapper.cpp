@@ -3,29 +3,41 @@
 
 namespace DiscordWrapper {
 
-DiscordSDK::DiscordSDK() : initialized_(false) {
+DiscordSDK::DiscordSDK() : initialized_(false), clientId_(0) {
 }
 
 DiscordSDK::~DiscordSDK() {
     Shutdown();
 }
 
-bool DiscordSDK::Initialize(int64_t clientId) {
+bool DiscordSDK::Initialize(uint64_t clientId) {
 #ifdef USE_DISCORD_SDK
     try {
-        auto result = discord::Core::Create(clientId, DiscordCreateFlags_Default, &core_);
-        if (result != discord::Result::Ok) {
-            std::cerr << "Failed to create Discord Core: " << static_cast<int>(result) << std::endl;
-            return false;
-        }
+        clientId_ = clientId;
+        client_ = std::make_shared<discordpp::Client>();
+        
+        // Add log callback
+        client_->AddLogCallback([](auto message, auto severity) {
+            std::cout << "[Discord SDK] " << message << std::endl;
+        }, discordpp::LoggingSeverity::Info);
+        
+        // Set status changed callback
+        client_->SetStatusChangedCallback([](discordpp::Client::Status status, discordpp::Client::Error error, int32_t errorDetail) {
+            if (status == discordpp::Client::Status::Ready) {
+                std::cout << "[Discord SDK] Client is ready!" << std::endl;
+            } else if (error != discordpp::Client::Error::None) {
+                std::cerr << "[Discord SDK] Connection Error: " << discordpp::Client::ErrorToString(error) << std::endl;
+            }
+        });
+        
         initialized_ = true;
         return true;
     } catch (const std::exception& e) {
-        std::cerr << "Exception during Discord SDK initialization: " << e.what() << std::endl;
+        std::cerr << "[Discord SDK] Exception during initialization: " << e.what() << std::endl;
         return false;
     }
 #else
-    std::cerr << "Discord SDK not available. Built without SDK support." << std::endl;
+    std::cerr << "[Discord SDK] Not available. Built without SDK support." << std::endl;
     return false;
 #endif
 }
@@ -33,7 +45,7 @@ bool DiscordSDK::Initialize(int64_t clientId) {
 void DiscordSDK::Shutdown() {
     if (initialized_) {
 #ifdef USE_DISCORD_SDK
-        core_.reset();
+        client_.reset();
 #endif
         initialized_ = false;
     }
@@ -41,65 +53,29 @@ void DiscordSDK::Shutdown() {
 
 bool DiscordSDK::UpdateActivity(const Activity& activity, std::string& error) {
 #ifdef USE_DISCORD_SDK
-    if (!initialized_) {
+    if (!initialized_ || !client_) {
         error = "Discord SDK not initialized";
         return false;
     }
 
     try {
-        discord::Activity discordActivity{};
+        discordpp::Activity discordActivity;
+        
+        // Set activity type (default to Playing)
+        discordActivity.SetType(static_cast<discordpp::ActivityTypes>(activity.activityType));
         
         // Set activity details
         if (!activity.state.empty()) {
-            discordActivity.SetState(activity.state.c_str());
+            discordActivity.SetState(activity.state);
         }
         if (!activity.details.empty()) {
-            discordActivity.SetDetails(activity.details.c_str());
+            discordActivity.SetDetails(activity.details);
         }
 
-        // Set timestamps
-        if (activity.startTimestamp > 0 || activity.endTimestamp > 0) {
-            auto& timestamps = discordActivity.GetTimestamps();
-            if (activity.startTimestamp > 0) {
-                timestamps.SetStart(activity.startTimestamp);
-            }
-            if (activity.endTimestamp > 0) {
-                timestamps.SetEnd(activity.endTimestamp);
-            }
-        }
-
-        // Set assets (images)
-        if (!activity.largeImageKey.empty() || !activity.smallImageKey.empty()) {
-            auto& assets = discordActivity.GetAssets();
-            if (!activity.largeImageKey.empty()) {
-                assets.SetLargeImage(activity.largeImageKey.c_str());
-            }
-            if (!activity.largeImageText.empty()) {
-                assets.SetLargeText(activity.largeImageText.c_str());
-            }
-            if (!activity.smallImageKey.empty()) {
-                assets.SetSmallImage(activity.smallImageKey.c_str());
-            }
-            if (!activity.smallImageText.empty()) {
-                assets.SetSmallText(activity.smallImageText.c_str());
-            }
-        }
-
-        // Set party info
-        if (!activity.partyId.empty() && activity.partySize > 0) {
-            auto& party = discordActivity.GetParty();
-            party.GetId() = activity.partyId.c_str();
-            auto& size = party.GetSize();
-            size.SetCurrentSize(activity.partySize);
-            if (activity.partyMax > 0) {
-                size.SetMaxSize(activity.partyMax);
-            }
-        }
-
-        // Update the activity
-        core_->ActivityManager().UpdateActivity(discordActivity, [&error](discord::Result result) {
-            if (result != discord::Result::Ok) {
-                error = "Failed to update activity: " + std::to_string(static_cast<int>(result));
+        // Update rich presence
+        client_->UpdateRichPresence(discordActivity, [&error](discordpp::ClientResult result) {
+            if (!result.Successful()) {
+                error = "Failed to update rich presence";
             }
         });
 
@@ -116,15 +92,17 @@ bool DiscordSDK::UpdateActivity(const Activity& activity, std::string& error) {
 
 bool DiscordSDK::ClearActivity(std::string& error) {
 #ifdef USE_DISCORD_SDK
-    if (!initialized_) {
+    if (!initialized_ || !client_) {
         error = "Discord SDK not initialized";
         return false;
     }
 
     try {
-        core_->ActivityManager().ClearActivity([&error](discord::Result result) {
-            if (result != discord::Result::Ok) {
-                error = "Failed to clear activity: " + std::to_string(static_cast<int>(result));
+        // Clear by setting empty activity
+        discordpp::Activity emptyActivity;
+        client_->UpdateRichPresence(emptyActivity, [&error](discordpp::ClientResult result) {
+            if (!result.Successful()) {
+                error = "Failed to clear activity";
             }
         });
         return true;
@@ -138,9 +116,9 @@ bool DiscordSDK::ClearActivity(std::string& error) {
 #endif
 }
 
-void DiscordSDK::Authorize(const std::string& scopes, std::function<void(const AuthResult&)> callback) {
+void DiscordSDK::Authorize(std::function<void(const AuthResult&)> callback) {
 #ifdef USE_DISCORD_SDK
-    if (!initialized_) {
+    if (!initialized_ || !client_) {
         AuthResult result;
         result.success = false;
         result.error = "Discord SDK not initialized";
@@ -149,19 +127,62 @@ void DiscordSDK::Authorize(const std::string& scopes, std::function<void(const A
     }
 
     try {
-        core_->UserManager().OnOAuth2Token.Connect([callback](discord::Result result, discord::OAuth2Token const& token) {
-            AuthResult authResult;
-            if (result == discord::Result::Ok) {
-                authResult.success = true;
-                authResult.accessToken = token.GetAccessToken();
-            } else {
+        // Generate OAuth2 code verifier
+        auto codeVerifier = client_->CreateAuthorizationCodeVerifier();
+        
+        // Set up authorization arguments
+        discordpp::AuthorizationArgs args{};
+        args.SetClientId(clientId_);
+        args.SetScopes(discordpp::Client::GetDefaultPresenceScopes());
+        args.SetCodeChallenge(codeVerifier.Challenge());
+        
+        // Begin authentication process
+        client_->Authorize(args, [this, callback, codeVerifier](auto result, auto code, auto redirectUri) {
+            if (!result.Successful()) {
+                AuthResult authResult;
                 authResult.success = false;
-                authResult.error = "Authorization failed: " + std::to_string(static_cast<int>(result));
+                authResult.error = "Authorization failed";
+                callback(authResult);
+                return;
             }
-            callback(authResult);
+            
+            // Exchange auth code for access token
+            client_->GetToken(clientId_, code, codeVerifier.Verifier(), redirectUri,
+                [this, callback](discordpp::ClientResult result,
+                std::string accessToken,
+                std::string refreshToken,
+                discordpp::AuthorizationTokenType tokenType,
+                int32_t expiresIn,
+                std::string scope) {
+                    
+                    if (!result.Successful()) {
+                        AuthResult authResult;
+                        authResult.success = false;
+                        authResult.error = "Failed to get token";
+                        callback(authResult);
+                        return;
+                    }
+                    
+                    // Update the token and connect
+                    client_->UpdateToken(tokenType, accessToken, [this, callback, accessToken, refreshToken, expiresIn](discordpp::ClientResult result) {
+                        if (result.Successful()) {
+                            client_->Connect();
+                            
+                            AuthResult authResult;
+                            authResult.success = true;
+                            authResult.accessToken = accessToken;
+                            authResult.refreshToken = refreshToken;
+                            authResult.expiresIn = expiresIn;
+                            callback(authResult);
+                        } else {
+                            AuthResult authResult;
+                            authResult.success = false;
+                            authResult.error = "Failed to update token";
+                            callback(authResult);
+                        }
+                    });
+                });
         });
-
-        core_->UserManager().GetOAuth2Token();
     } catch (const std::exception& e) {
         AuthResult result;
         result.success = false;
@@ -178,9 +199,7 @@ void DiscordSDK::Authorize(const std::string& scopes, std::function<void(const A
 
 void DiscordSDK::RunCallbacks() {
 #ifdef USE_DISCORD_SDK
-    if (initialized_ && core_) {
-        core_->RunCallbacks();
-    }
+    discordpp::RunCallbacks();
 #endif
 }
 

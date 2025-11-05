@@ -6,15 +6,7 @@ import * as path from 'path';
 export interface Activity {
     state?: string;
     details?: string;
-    largeImageKey?: string;
-    largeImageText?: string;
-    smallImageKey?: string;
-    smallImageText?: string;
-    startTimestamp?: number;
-    endTimestamp?: number;
-    partyId?: string;
-    partySize?: number;
-    partyMax?: number;
+    type?: number; // 0 = Playing, 1 = Streaming, 2 = Listening, 3 = Watching
 }
 
 /**
@@ -23,6 +15,8 @@ export interface Activity {
 export interface AuthResult {
     success: boolean;
     accessToken: string;
+    refreshToken: string;
+    expiresIn: number;
     error: string;
 }
 
@@ -37,7 +31,7 @@ interface NativeDiscordSDK {
     shutdown(): void;
     updateActivity(activity: Activity): boolean;
     clearActivity(): boolean;
-    authorize(scopes: string, callback: AuthCallback): void;
+    authorize(callback: AuthCallback): void;
     runCallbacks(): void;
     isInitialized(): boolean;
 }
@@ -125,17 +119,13 @@ export class DiscordSocialSDK {
 
     /**
      * Authorize the user and get an OAuth2 token
-     * @param scopes - OAuth2 scopes to request (space-separated)
      * @param callback - Callback function to receive the authorization result
      */
-    authorize(scopes: string, callback: AuthCallback): void {
-        if (typeof scopes !== 'string') {
-            throw new TypeError('scopes must be a string');
-        }
+    authorize(callback: AuthCallback): void {
         if (typeof callback !== 'function') {
             throw new TypeError('callback must be a function');
         }
-        this.nativeInstance.authorize(scopes, callback);
+        this.nativeInstance.authorize(callback);
     }
 
     /**

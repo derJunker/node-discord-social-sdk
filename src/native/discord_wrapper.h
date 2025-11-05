@@ -6,11 +6,8 @@
 #include <memory>
 
 #ifdef USE_DISCORD_SDK
-#ifdef USE_DISCORD_SDK_ALT_HEADER
+#define DISCORDPP_IMPLEMENTATION
 #include "discordpp.h"
-#else
-#include "discord.h"
-#endif
 #endif
 
 namespace DiscordWrapper {
@@ -19,22 +16,16 @@ namespace DiscordWrapper {
 struct Activity {
     std::string state;
     std::string details;
-    std::string largeImageKey;
-    std::string largeImageText;
-    std::string smallImageKey;
-    std::string smallImageText;
-    int64_t startTimestamp;
-    int64_t endTimestamp;
-    std::string partyId;
-    int partySize;
-    int partyMax;
+    int activityType; // 0 = Playing, 1 = Streaming, etc.
 };
 
 // Authorization result structure
 struct AuthResult {
     bool success;
     std::string accessToken;
+    std::string refreshToken;
     std::string error;
+    int32_t expiresIn;
 };
 
 class DiscordSDK {
@@ -42,8 +33,8 @@ public:
     DiscordSDK();
     ~DiscordSDK();
 
-    // Initialize the SDK
-    bool Initialize(int64_t clientId);
+    // Initialize the SDK with client ID
+    bool Initialize(uint64_t clientId);
     
     // Shutdown the SDK
     void Shutdown();
@@ -55,7 +46,7 @@ public:
     bool ClearActivity(std::string& error);
 
     // Authorize user and get OAuth2 token
-    void Authorize(const std::string& scopes, std::function<void(const AuthResult&)> callback);
+    void Authorize(std::function<void(const AuthResult&)> callback);
 
     // Run callbacks (should be called periodically)
     void RunCallbacks();
@@ -65,9 +56,10 @@ public:
 
 private:
     bool initialized_;
+    uint64_t clientId_;
     
 #ifdef USE_DISCORD_SDK
-    std::unique_ptr<discord::Core> core_;
+    std::shared_ptr<discordpp::Client> client_;
 #endif
 };
 

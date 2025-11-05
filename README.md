@@ -82,20 +82,20 @@ if (sdk.initialize(clientId)) {
 
     // Update rich presence
     sdk.updateActivity({
-        state: 'Playing Solo',
-        details: 'In a match',
-        largeImageKey: 'game_logo',
-        largeImageText: 'My Game',
-        startTimestamp: Date.now()
+        state: 'In Competitive Match',
+        details: 'Rank: Diamond II',
+        type: 0 // 0 = Playing
     });
 
     // Clear activity
     sdk.clearActivity();
 
     // Authorize user
-    sdk.authorize('identify email', (result) => {
+    sdk.authorize((result) => {
         if (result.success) {
             console.log('Access Token:', result.accessToken);
+            console.log('Refresh Token:', result.refreshToken);
+            console.log('Expires in:', result.expiresIn, 'seconds');
         } else {
             console.error('Auth failed:', result.error);
         }
@@ -127,14 +127,9 @@ if (sdk.initialize(clientId)) {
 
     // Update rich presence with type safety
     const activity: Activity = {
-        state: 'Playing Solo',
-        details: 'In a match',
-        largeImageKey: 'game_logo',
-        largeImageText: 'My Game',
-        startTimestamp: Date.now(),
-        partyId: 'party123',
-        partySize: 1,
-        partyMax: 4
+        state: 'In Competitive Match',
+        details: 'Rank: Diamond II',
+        type: 0 // 0 = Playing, 1 = Streaming, 2 = Listening, 3 = Watching
     };
     sdk.updateActivity(activity);
 
@@ -142,9 +137,11 @@ if (sdk.initialize(clientId)) {
     sdk.clearActivity();
 
     // Authorize user with callback
-    sdk.authorize('identify email', (result: AuthResult) => {
+    sdk.authorize((result: AuthResult) => {
         if (result.success) {
             console.log('Access Token:', result.accessToken);
+            console.log('Refresh Token:', result.refreshToken);
+            console.log('Expires in:', result.expiresIn, 'seconds');
         } else {
             console.error('Auth failed:', result.error);
         }

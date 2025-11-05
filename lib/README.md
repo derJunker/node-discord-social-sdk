@@ -17,7 +17,7 @@ lib/
 ├── README.md (this file)
 └── discord_social_sdk/
     ├── include/
-    │   └── discord.h (or discordpp.h)
+    │   └── discordpp.h
     ├── lib/
     │   └── release/
     │       ├── discord_partner_sdk.lib (Windows)
@@ -29,8 +29,6 @@ lib/
             ├── libdiscord_partner_sdk.so (Linux)
             └── libdiscord_partner_sdk.dylib (macOS)
 ```
-
-**Note:** The Discord SDK header may be named either `discord.h` or `discordpp.h` depending on your SDK version. The build system will automatically detect which one is present.
 
 ## Platform-Specific Notes
 
